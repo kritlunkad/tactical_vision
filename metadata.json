@@ -1,0 +1,6 @@
+{
+  "name": "Broadcast-to-Tactics: Automated Team Formation Analyzer",
+  "description": "Computer vision pipeline and tactical analytics suite that transforms 2D sports broadcast footage into 2D top-down coordinates, automated formation detection, Voronoi pitch control, passing networks, heatmaps, and AI coaching insights.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
