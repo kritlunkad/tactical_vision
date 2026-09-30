@@ -3,8 +3,8 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #030712;
-    color: #f1f5f9;
+    background-color: #000000;
+    color: #ffffff;
   }
 
   code, kbd, samp, pre {
@@ -18,33 +18,100 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: #000000;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.8);
-  border-radius: 4px;
+  background: #1d4ed8;
+  border-radius: 0;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 1);
+  background: #3b82f6;
 }
 
 /* Tactical Pitch Patterns */
 .tactical-pitch-grass {
-  background: repeating-linear-gradient(
-    90deg,
-    #0f3e2e 0px,
-    #0f3e2e 40px,
-    #134e3a 40px,
-    #134e3a 80px
-  );
+  background: #020617;
 }
 
 .tactical-hockey-ice {
-  background: radial-gradient(circle at center, #0f2744 0%, #081628 100%);
+  background: #020617;
 }
 
-.tactical-kabaddi-mat {
-  background: radial-gradient(circle at center, #451a03 0%, #2b1002 100%);
+@layer utilities {
+  [class*="rounded"] {
+    border-radius: 0 !important;
+  }
+
+  [class*="shadow"] {
+    box-shadow: none !important;
+  }
+
+  [class*="bg-gradient"] {
+    background-image: none !important;
+    background-color: #000000 !important;
+  }
+
+  [class*="emerald"],
+  [class*="cyan"],
+  [class*="purple"],
+  [class*="amber"],
+  [class*="rose"],
+  [class*="red"],
+  [class*="orange"],
+  [class*="teal"],
+  [class*="indigo"],
+  [class*="green"] {
+    --tw-ring-color: rgba(37, 99, 235, 0.45) !important;
+    --tw-border-opacity: 1 !important;
+  }
+
+  [class*="text-emerald"],
+  [class*="text-cyan"],
+  [class*="text-purple"],
+  [class*="text-amber"],
+  [class*="text-rose"],
+  [class*="text-red"],
+  [class*="text-orange"],
+  [class*="text-teal"],
+  [class*="text-indigo"],
+  [class*="text-green"] {
+    color: #60a5fa !important;
+  }
+
+  [class*="bg-emerald"],
+  [class*="bg-cyan"],
+  [class*="bg-purple"],
+  [class*="bg-amber"],
+  [class*="bg-rose"],
+  [class*="bg-red"],
+  [class*="bg-orange"],
+  [class*="bg-teal"],
+  [class*="bg-indigo"],
+  [class*="bg-green"] {
+    background-color: rgba(37, 99, 235, 0.18) !important;
+  }
+
+  [class*="border-emerald"],
+  [class*="border-cyan"],
+  [class*="border-purple"],
+  [class*="border-amber"],
+  [class*="border-rose"],
+  [class*="border-red"],
+  [class*="border-orange"],
+  [class*="border-teal"],
+  [class*="border-indigo"],
+  [class*="border-green"] {
+    border-color: rgba(59, 130, 246, 0.85) !important;
+  }
+
+  [class*="accent-emerald"],
+  [class*="accent-cyan"],
+  [class*="accent-purple"],
+  [class*="accent-amber"],
+  [class*="accent-rose"],
+  [class*="accent-red"] {
+    accent-color: #2563eb !important;
+  }
 }
 
 /* Pulse radar ring */

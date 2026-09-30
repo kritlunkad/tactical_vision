@@ -4,9 +4,17 @@ sys.path.append('../')
 from utils import measure_distance ,get_foot_position
 
 class SpeedAndDistance_Estimator():
-    def __init__(self):
+    def __init__(self, frame_rate=24, pitch_length_meters=105, pitch_width_meters=68):
         self.frame_window=5
-        self.frame_rate=24
+        self.frame_rate=frame_rate
+        self.pitch_length_meters=pitch_length_meters
+        self.pitch_width_meters=pitch_width_meters
+        self.max_player_speed_kmh=38.0
+
+    def measure_pitch_distance(self, start_position, end_position):
+        dx = ((end_position[0] - start_position[0]) / 100.0) * self.pitch_length_meters
+        dy = ((end_position[1] - start_position[1]) / 100.0) * self.pitch_width_meters
+        return (dx * dx + dy * dy) ** 0.5
     
     def add_speed_and_distance_to_tracks(self,tracks):
         total_distance= {}
@@ -28,10 +36,14 @@ class SpeedAndDistance_Estimator():
                     if start_position is None or end_position is None:
                         continue
                     
-                    distance_covered = measure_distance(start_position,end_position)
+                    distance_covered = self.measure_pitch_distance(start_position,end_position)
                     time_elapsed = (last_frame-frame_num)/self.frame_rate
+                    if time_elapsed <= 0:
+                        continue
                     speed_meteres_per_second = distance_covered/time_elapsed
                     speed_km_per_hour = speed_meteres_per_second*3.6
+                    if speed_km_per_hour > self.max_player_speed_kmh:
+                        continue
 
                     if object not in total_distance:
                         total_distance[object]= {}

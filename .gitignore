@@ -1,8 +1,82 @@
+# Dependencies
 node_modules/
+/.pnp
+.pnp.js
+
+# Python Virtual Environments (prevents 22,000+ files from showing up in git)
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python Bytecode & Cache
+Archive 2/__pycache__
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+backend/cache/
+backend/cache*/
+cache/
+
+# Large Model Weights
+*.pt
+*.pth
+*.onnx
+*.bin
+*.weights
+HockeyAI_model_weight.pt
+!Archive 2/models/put_models_here.txt
+
+# Media & Videos (large binaries)
+*.mp4
+*.avi
+*.mov
+*.mkv
+input_videos/
+output_videos/
+Archive 2/output_videos/
+public/videos/
+
+# Pickle / Stubs Cache
+*.pkl
+*.pickle
+
+# Build & Testing
 build/
 dist/
 coverage/
-.DS_Store
-*.log
-.env*
+*.egg-info/
+.eggs/
+
+# Environment Variables
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+Archive 2/input_videos  
+Archive 2/output_videos
+Archive 2/model_weights

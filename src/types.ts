@@ -1,4 +1,4 @@
-export type SportType = 'football' | 'hockey' | 'kabaddi';
+export type SportType = 'football' | 'hockey';
 
 export interface Point2D {
   x: number; // 0 to 100 or metric coordinates
@@ -12,7 +12,7 @@ export interface BoundingBox {
   h: number;
 }
 
-export type EntityRole = 'goalkeeper' | 'defender' | 'midfielder' | 'forward' | 'raider' | 'corner' | 'cover' | 'in_out' | 'referee' | 'ball' | 'puck';
+export type EntityRole = 'goalkeeper' | 'defender' | 'midfielder' | 'forward' | 'referee' | 'ball' | 'puck';
 
 export interface DetectedEntity {
   id: string;
@@ -36,9 +36,10 @@ export interface FrameData {
   timeDisplay: string;
   entities: DetectedEntity[];
   ballPos: Point2D | null;
-  possessionTeam: 'teamA' | 'teamB';
+  ballScreenPos?: Point2D | null;
+  possessionTeam: 'teamA' | 'teamB' | 'neutral';
   possessionPlayerId: string | null;
-  phase: 'build_up' | 'high_press' | 'counter_attack' | 'raid_defense' | 'settled_defense' | 'transitional';
+  phase: 'build_up' | 'high_press' | 'counter_attack' | 'settled_defense' | 'transitional' | 'offensive_zone' | 'defensive_zone' | 'neutral_zone' | 'forecheck' | 'power_play' | 'penalty_kill';
   eventTag?: string;
   homographyCalibration: Point2D[]; // 4 anchor corners on broadcast view
 }
@@ -134,7 +135,7 @@ export interface SportDimension {
   lengthMeters: number;
   widthMeters: number;
   pitchRatio: number; // length / width
-  surfaceTheme: 'grass' | 'ice' | 'mat';
+  surfaceTheme: 'grass' | 'ice';
   landmarks: {
     name: string;
     pitchPos: Point2D;
@@ -159,4 +160,3 @@ export interface SampleMatch {
 }
 
 export type MatchData = SampleMatch;
-

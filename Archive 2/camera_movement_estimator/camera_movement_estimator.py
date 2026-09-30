@@ -18,8 +18,10 @@ class CameraMovementEstimator():
 
         first_frame_grayscale = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
         mask_features = np.zeros_like(first_frame_grayscale)
-        mask_features[:,0:20] = 1
-        mask_features[:,900:1050] = 1
+        frame_width = first_frame_grayscale.shape[1]
+        edge_width = max(20, int(frame_width * 0.04))
+        mask_features[:, 0:edge_width] = 1
+        mask_features[:, frame_width - edge_width:frame_width] = 1
 
         self.features = dict(
             maxCorners = 100,
@@ -84,7 +86,7 @@ class CameraMovementEstimator():
 
             old_gray = frame_gray.copy()
         
-        if stub_path is not None:
+        if read_from_stub and stub_path is not None:
             with open(stub_path,'wb') as f:
                 pickle.dump(camera_movement,f)
 

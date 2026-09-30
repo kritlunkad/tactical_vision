@@ -350,16 +350,7 @@ export function detectFormation(
   sport: SportType = 'football'
 ): string {
   const teamEntities = entities.filter(e => e.team === team);
-  if (teamEntities.length === 0) return sport === 'kabaddi' ? '2-3-2' : '4-3-3';
-
-  if (sport === 'kabaddi') {
-    // Kabaddi 7-player setup: Corners, Covers, In-Out Chains
-    const count = teamEntities.length;
-    if (count <= 4) return '2-2 Compact Wall';
-    if (count === 5) return '2-1-2 Chain Arc';
-    if (count === 6) return '2-2-2 Parallel Line';
-    return '2-3-2 Baulk Defensive Arc';
-  }
+  if (teamEntities.length === 0) return sport === 'hockey' ? '1-3-1 Power Play' : '4-3-3';
 
   if (sport === 'hockey') {
     // Hockey 11v11 or 6v6/5v5

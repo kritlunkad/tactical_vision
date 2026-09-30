@@ -89,17 +89,41 @@ export const AICoachChat: React.FC<AICoachChatProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: textToSend,
-          context: {
+          // Send both canonical and alias keys for server robustness
+          tacticalContext: {
             sport,
+            teamAName: teamA.name,
+            teamBName: teamB.name,
             teamA: teamA.name,
             teamB: teamB.name,
             formationA: metrics.detectedFormationA,
             formationB: metrics.detectedFormationB,
+            possession: (metrics as any).possessionA ?? (metrics as any).possession ?? 50,
+            possessionA: (metrics as any).possessionA ?? (metrics as any).possession ?? 50,
+            pitchControlTeamA: pitchControlA,
             pitchControlA,
-            compactnessA: metrics.compactnessA.convexHullAreaSqM,
+            compactnessA: metrics.compactnessA,
+            ppdaTeamA: metrics.ppdaTeamA,
             ppdaA: metrics.ppdaTeamA,
             xTA: metrics.expectedThreatTeamA,
+            expectedThreatTeamA: metrics.expectedThreatTeamA,
           },
+          context: {
+            sport,
+            teamA: teamA.name,
+            teamB: teamB.name,
+            teamAName: teamA.name,
+            teamBName: teamB.name,
+            formationA: metrics.detectedFormationA,
+            formationB: metrics.detectedFormationB,
+            pitchControlA,
+            pitchControlTeamA: pitchControlA,
+            compactnessA: metrics.compactnessA.convexHullAreaSqM,
+            ppdaA: metrics.ppdaTeamA,
+            ppdaTeamA: metrics.ppdaTeamA,
+            xTA: metrics.expectedThreatTeamA,
+          },
+          conversationHistory: messages.filter(m => m.id !== 'welcome').map(m => ({ role: m.role, content: m.content })),
         }),
       });
 

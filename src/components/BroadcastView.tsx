@@ -85,6 +85,76 @@ export const BroadcastView: React.FC<BroadcastViewProps> = ({
   const [currentPoints, setCurrentPoints] = useState<Point2D[]>([]);
   const [draggingAnchorIndex, setDraggingAnchorIndex] = useState<number | null>(null);
 
+  // 1. Control HTML5 video playback and speed
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !customVideoUrl) return;
+
+    video.playbackRate = playbackSpeed;
+    if (isPlaying) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isPlaying, playbackSpeed, customVideoUrl]);
+
+  // 2. Drive frame tracking directly from video playback in real time
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !customVideoUrl) return;
+
+    let animationFrameId: number;
+
+    const syncFrameFromVideo = () => {
+      if (!video.paused && !video.ended) {
+        const totalDuration = video.duration || (allFrames.length / 50.0);
+        const totalFrames = allFrames.length || 1;
+        if (totalDuration > 0) {
+          const ratio = Math.max(0, Math.min(1, video.currentTime / totalDuration));
+          const frameIdx = Math.min(totalFrames - 1, Math.floor(ratio * totalFrames));
+          if (frameIdx !== currentFrameIndex) {
+            onSeekFrame(frameIdx);
+          }
+        }
+      }
+      animationFrameId = requestAnimationFrame(syncFrameFromVideo);
+    };
+
+    animationFrameId = requestAnimationFrame(syncFrameFromVideo);
+
+    const handleEnded = () => {
+      video.currentTime = 0;
+      onSeekFrame(0);
+      if (isPlaying) {
+        video.play().catch(() => {});
+      }
+    };
+
+    video.addEventListener('ended', handleEnded);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, [customVideoUrl, allFrames.length, currentFrameIndex, isPlaying, onSeekFrame]);
+
+  // 3. Seek video only when user manually scrubs slider while paused
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !customVideoUrl) return;
+
+    if (video.paused) {
+      const totalFrames = allFrames.length || 1;
+      const totalDuration = video.duration || (totalFrames / 50.0);
+      if (totalDuration > 0 && totalFrames > 0) {
+        const targetTime = (currentFrameIndex / totalFrames) * totalDuration;
+        if (Math.abs(video.currentTime - targetTime) > 0.05) {
+          video.currentTime = targetTime;
+        }
+      }
+    }
+  }, [currentFrameIndex, customVideoUrl, allFrames.length]);
+
   // Render Synthetic Broadcast Feed or Custom Video + Overlays on Canvas
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -123,9 +193,10 @@ export const BroadcastView: React.FC<BroadcastViewProps> = ({
       selectedEntityId
     );
 
-    // 3. Draw Ball or Puck
-    if (currentFrame.ballPos) {
-      drawBall(ctx, width, height, currentFrame.ballPos, sport);
+    // 3. Draw Ball or Puck (only if real detection exists)
+    const ballToDraw = currentFrame.ballScreenPos || currentFrame.ballPos;
+    if (ballToDraw && typeof ballToDraw.x === 'number' && typeof ballToDraw.y === 'number') {
+      drawBall(ctx, width, height, ballToDraw, sport);
     }
 
     // 4. Draw Coach Telestrator Annotations
@@ -333,7 +404,7 @@ export const BroadcastView: React.FC<BroadcastViewProps> = ({
           <video
             ref={videoRef}
             src={customVideoUrl}
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             muted
             playsInline
           />
@@ -550,37 +621,8 @@ function drawSyntheticBroadcastScene(
     ctx.lineTo(w * 0.68, h * 0.84);
     ctx.stroke();
   } else {
-    // Kabaddi Mat
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#3f1702');
-    grad.addColorStop(0.5, '#541f02');
-    grad.addColorStop(1, '#2c0e00');
-    ctx.fillStyle = grad;
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, w, h);
-
-    // Court border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(w * 0.15, h * 0.20, w * 0.70, h * 0.62);
-
-    // Mid-line & Baulk/Bonus lines
-    ctx.strokeStyle = '#fbbf24'; // Mid-line gold
-    ctx.beginPath();
-    ctx.moveTo(w * 0.50, h * 0.20);
-    ctx.lineTo(w * 0.50, h * 0.82);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#f87171'; // Baulk line
-    ctx.beginPath();
-    ctx.moveTo(w * 0.70, h * 0.20);
-    ctx.lineTo(w * 0.72, h * 0.82);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#34d399'; // Bonus line
-    ctx.beginPath();
-    ctx.moveTo(w * 0.80, h * 0.20);
-    ctx.lineTo(w * 0.82, h * 0.82);
-    ctx.stroke();
   }
 }
 
@@ -715,15 +757,17 @@ function drawDetectedEntities(
     ctx.stroke();
 
     // 3. Velocity direction arrow
-    if (showVectors && ent.speedKmh > 5) {
-      const vx = ent.velocity.x * 12;
-      const vy = ent.velocity.y * 12;
-      ctx.strokeStyle = '#22d3ee';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px + vx, py + vy);
-      ctx.stroke();
+    if (showVectors && ent.speedKmh > 4 && ent.velocity) {
+      const vx = Math.max(-18, Math.min(18, ent.velocity.x * 10));
+      const vy = Math.max(-18, Math.min(18, ent.velocity.y * 10));
+      if (Math.hypot(vx, vy) > 2) {
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + vx, py + vy);
+        ctx.stroke();
+      }
     }
 
     // 4. Label Badge

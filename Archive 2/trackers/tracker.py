@@ -14,10 +14,18 @@ class Tracker:
     def __init__(self, model_path, batch_size=32, device='auto'):
         self.model = YOLO(model_path)
         self.batch_size = batch_size
-        self.device = 'mps' if device == 'auto' and torch.backends.mps.is_available() else device
+        if device == 'auto':
+            if torch.cuda.is_available():
+                self.device = 0
+            elif torch.backends.mps.is_available():
+                self.device = 'mps'
+            else:
+                self.device = 'cpu'
+        else:
+            self.device = device
         self.tracker = sv.ByteTrack()
 
-    def add_position_to_tracks(sekf,tracks):
+    def add_position_to_tracks(self,tracks):
         for object, object_tracks in tracks.items():
             for frame_num, track in enumerate(object_tracks):
                 for track_id, track_info in track.items():
@@ -35,10 +43,16 @@ class Tracker:
         # Interpolate missing values
         df_ball_positions = df_ball_positions.interpolate()
         df_ball_positions = df_ball_positions.bfill()
+        df_ball_positions = df_ball_positions.ffill()
 
-        ball_positions = [{1: {"bbox":x}} for x in df_ball_positions.to_numpy().tolist()]
+        interpolated = []
+        for x in df_ball_positions.to_numpy().tolist():
+            if len(x) == 4 and np.all(np.isfinite(x)) and x[2] > x[0] and x[3] > x[1]:
+                interpolated.append({1: {"bbox": x}})
+            else:
+                interpolated.append({})
 
-        return ball_positions
+        return interpolated
 
     def detect_frames(self, frames):
         detections = []
@@ -52,12 +66,66 @@ class Tracker:
             detections += detections_batch
         return detections
 
+    def _sanitize_detections(self, detections, frame_shape):
+        if detections.xyxy is None or len(detections) == 0:
+            return detections
+
+        frame_h, frame_w = frame_shape[:2]
+        xyxy = np.asarray(detections.xyxy, dtype=float)
+        confidences = None if detections.confidence is None else np.asarray(detections.confidence, dtype=float)
+        class_ids = None if detections.class_id is None else np.asarray(detections.class_id, dtype=float)
+
+        widths = xyxy[:, 2] - xyxy[:, 0]
+        heights = xyxy[:, 3] - xyxy[:, 1]
+        mask = (
+            np.all(np.isfinite(xyxy), axis=1)
+            & (widths > 2.0)
+            & (heights > 2.0)
+            & (xyxy[:, 2] > 0)
+            & (xyxy[:, 3] > 0)
+            & (xyxy[:, 0] < frame_w)
+            & (xyxy[:, 1] < frame_h)
+        )
+
+        if confidences is not None:
+            mask &= np.isfinite(confidences)
+            mask &= confidences >= 0.0
+            mask &= confidences <= 1.0
+
+        if class_ids is not None:
+            mask &= np.isfinite(class_ids)
+
+        detections = detections[mask]
+        if len(detections) == 0:
+            return detections
+
+        detections.xyxy[:, [0, 2]] = np.clip(detections.xyxy[:, [0, 2]], 0, frame_w - 1)
+        detections.xyxy[:, [1, 3]] = np.clip(detections.xyxy[:, [1, 3]], 0, frame_h - 1)
+        if detections.confidence is not None:
+            detections.confidence = np.nan_to_num(detections.confidence, nan=0.0, posinf=1.0, neginf=0.0)
+        return detections
+
+    def _safe_update_tracker(self, detections):
+        try:
+            return self.tracker.update_with_detections(detections)
+        except ValueError as exc:
+            if "invalid numeric" not in str(exc) and "matrix contains" not in str(exc):
+                raise
+            self.tracker = sv.ByteTrack()
+            if len(detections) == 0:
+                return detections
+            try:
+                return self.tracker.update_with_detections(detections)
+            except ValueError:
+                return sv.Detections.empty()
+
     def get_object_tracks(self, frames, read_from_stub=False, stub_path=None):
         
         if read_from_stub and stub_path is not None and os.path.exists(stub_path):
             with open(stub_path,'rb') as f:
                 tracks = pickle.load(f)
-            return tracks
+            if len(tracks.get('players', [])) == len(frames):
+                return tracks
 
         detections = self.detect_frames(frames)
 
@@ -73,18 +141,22 @@ class Tracker:
 
             # Covert to supervision Detection format
             detection_supervision = sv.Detections.from_ultralytics(detection)
+            detection_supervision = self._sanitize_detections(
+                detection_supervision,
+                frames[frame_num].shape,
+            )
 
             # Convert GoalKeeper to player object
             for object_ind , class_id in enumerate(detection_supervision.class_id):
                 if cls_names[class_id] == "goalkeeper":
                     detection_supervision.class_id[object_ind] = cls_names_inv["player"]
 
-            # Track Objects
-            detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
-
             tracks["players"].append({})
             tracks["referees"].append({})
             tracks["ball"].append({})
+
+            # Track Objects
+            detection_with_tracks = self._safe_update_tracker(detection_supervision)
 
             for frame_detection in detection_with_tracks:
                 bbox = frame_detection[0].tolist()
@@ -104,7 +176,7 @@ class Tracker:
                 if cls_id == cls_names_inv['ball']:
                     tracks["ball"][frame_num][1] = {"bbox":bbox}
 
-        if stub_path is not None:
+        if read_from_stub and stub_path is not None:
             with open(stub_path,'wb') as f:
                 pickle.dump(tracks,f)
 
